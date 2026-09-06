@@ -1,0 +1,389 @@
+:root {
+            /* Eleven entries, one per job in the role layer below. Seven
+               others were pruned: they duplicated these to within a
+               percentage point or two, or were left over from a dead
+               declaration. */
+            --reed-color-red: hsl(353, 67%, 37%);
+            --reed-gray10:  hsl(0, 0%, 10%);
+            --reed-brown: hsl(35, 11%, 22%);
+            --reed-bleach: hsl(60, 5%, 92%);
+            --reed-stone-cold-gray: hsl(0, 0%, 33%);
+            --reed-white-smoke: hsl(60, 10%, 96%);
+            --reed-gray80: hsl(0, 0%, 80%);
+            --reed-dark-teal: hsl(145, 61%, 26%);
+            --reed-gray-cyan: hsl(142, 31%, 93%);
+            --reed-pure-white: hsl(0, 0%, 100%);
+            --reed-dark-gray: hsl(0, 0%, 60%);
+}
+
+/* REED London Online — preview stylesheet / starting point for the LEAF
+   CSS Injector. Pairs with TEI2HTML_REED.xsl.
+
+   Class scheme produced by the XSLT:
+     .reed-text                wrapper, reserves the right-hand gutter
+     .reed-marginalia .reed-margin-left  <note type="marginal" place="margin_left">
+     .reed-marginalia .reed-margin-right <note type="marginal" place="margin_right">
+     .reed-note-marker              clickable marker for a researchNote
+     .reed-research-note            the popover body
+     .reed-ex                       editorial expansion of an abbreviation
+     .reed-supplied                 text supplied by the editor
+     .reed-gap                      omitted/illegible text
+     .reed-pb                       page-break anchor (hidden)
+     .reed-ab .reed-rend-center     anonymous block, with @rend as a class
+     .reed-add-above .reed-add-below .reed-tei-date .reed-tei-title
+     .reed-transcription .reed-endnote   from div/@type
+*/
+
+/* ------------------------------------------------------------ palette use
+
+   Rather than reaching into the palette at every rule, the stylesheet
+   names the JOBS colours do and points each job at one palette entry.
+   Every colour below this block is one of these eleven, so re-theming
+   means editing this list and nothing else — and a question like "are the
+   marginalia and the deletions meant to be the same grey?" is answerable
+   by reading nine lines instead of hunting through the file.
+
+   Deliberate collapses, where the values were distinguishable in theory
+   more than on screen:
+     ink-faint  was three greys (47%, 53%, 60%) — gaps, the L/R letter,
+                deletions: all "faint apparatus", now one
+     ink-muted  was 27% and 33% — marginalia and inline research notes
+     rule       was 73%, 80% and 81% — three different 1px borders
+   ------------------------------------------------------------------------ */
+
+.reed-text {
+  --reed-ink: var(--reed-gray10);                 /* running text, h1      */
+  --reed-ink-heading: var(--reed-brown);          /* division heads        */
+  --reed-ink-muted: var(--reed-stone-cold-gray);  /* marginalia            */
+  --reed-ink-faint: var(--reed-dark-gray);        /* apparatus marks       */
+  --reed-rule: var(--reed-gray80);                /* 1px borders           */
+  --reed-rule-faint: var(--reed-bleach);          /* hairline between divs */
+  --reed-surface: var(--reed-white-smoke);        /* L/R badge             */
+  --reed-surface-raised: var(--reed-pure-white);  /* popover               */
+  --reed-accent: var(--reed-dark-teal);           /* research-note marker  */
+  --reed-accent-wash: var(--reed-gray-cyan);      /* its hover state       */
+  --reed-entity: var(--reed-color-red);           /* named entities        */
+
+  /* Gutter geometry. These three are shared by the marginalia rules
+     below — in particular a note encoded inside a table cell has to clear
+     the money column, so --money-col is declared here and used by both
+     the column and the note offset, rather than being repeated. */
+  --gutter: 8rem;
+  --note-width: 7rem;
+  --money-col: 10.5rem;
+
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5em 9rem 3em 1.5em;  /* right padding = the notes' gutter */
+  font-family: Georgia, "Iowan Old Style", serif;
+  line-height: 1.5;
+  color: var(--reed-ink);
+}
+
+/* ---------------------------------------------------------------- page */
+
+/* The record title is the one prominent thing on the page — but set in
+   the text face at a modest size, not shouted. */
+.reed-text h1 {
+  font-size: 1.35em;
+  font-weight: normal;
+  color: var(--reed-ink);
+  margin-bottom: 1.2em;
+}
+
+.reed-text h1 .reed-tei-title {
+  font-style: normal;           /* the record title is already the heading */
+}
+
+/* Division heads are page/folio references — apparatus, not content.
+   Set in the text face at body size — findable when you scan for a page
+   reference, but not competing with the record itself. Separation between
+   divisions comes from a hairline rule and white space rather than from
+   oversized type. */
+.reed-text h2,
+.reed-text h3 {
+  font-family: inherit;         /* the text face, not a contrasting sans */
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--reed-ink-heading);
+  margin: 0 0 0.9em 0;
+}
+
+.reed-text section > section {
+  margin-top: 2.2em;
+  padding-top: 1.3em;
+  border-top: 1px solid var(--reed-rule-faint);
+}
+
+.reed-text section > section:first-of-type {
+  border-top: 0;
+}
+
+.reed-text p {
+  margin: 0 0 1em 0;
+}
+
+.reed-text section.reed-endnote {
+  margin-top: 3em;
+  font-size: 0.92em;
+}
+
+/* -------------------------------------------------- transcription tables */
+
+.reed-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em 0;
+}
+
+.reed-text td {
+  vertical-align: top;
+  padding: 0.15em 0;
+}
+
+/* The money column: last cell of each row, right-aligned and kept on one
+   line so sums like "xxvj s. iij d." don't wrap. Its width is the
+   --money-col variable because the marginalia rules need to know it. */
+.reed-text td:last-child {
+  box-sizing: border-box;
+  width: var(--money-col);
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 1.5em;
+}
+
+/* ------------------------------------------------------ marginal notes */
+
+/* Every marginal note, whichever side of the manuscript page it sits on,
+   is displayed in the one right-hand gutter.
+
+   A float rather than absolute positioning: notes can occur as two
+   consecutive siblings before an <ab> (p 171), and floats stack with
+   clear instead of overlapping. The negative margin is what carries the
+   note out of the text column; table cells don't clip overflow, so it
+   escapes a <td> as well as a <p>. */
+.reed-marginalia {
+  float: right;
+  clear: right;
+  width: var(--note-width);
+  margin-right: calc(-1 * var(--gutter));
+  font-size: 0.75em;
+  line-height: 1.3;
+  color: var(--reed-ink-muted);
+  text-align: left;
+}
+
+/* A note encoded inside a transcription row sits in the first cell, so
+   its float would land against the money column rather than the page
+   edge: it has to be pushed out by that column's width as well.
+
+   The gutter variables are in rem, not em, deliberately. An em on this
+   element is 0.75 of an em on the table cell, so an em-based offset comes
+   out a quarter short and drops the note straight onto the sums. */
+.reed-text td:not(:last-child) .reed-marginalia {
+  margin-right: calc(-1 * (var(--gutter) + var(--money-col)));
+}
+
+/* Which margin the note occupies in the manuscript. The letter is
+   decorative — the same information is in the title attribute and in
+   data-place, so nothing depends on the pseudo-element. */
+.reed-marginalia::before {
+  content: "";
+  float: left;
+  margin: 0.1em 0.4em 0 0;
+  padding: 0 0.3em;
+  border: 1px solid var(--reed-rule);
+  border-radius: 2px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.75em;
+  line-height: 1.5;
+  color: var(--reed-ink-faint);
+  background: var(--reed-surface);
+}
+
+.reed-marginalia.reed-margin-left::before  { content: "L"; }
+.reed-marginalia.reed-margin-right::before { content: "R"; }
+
+/* No @place in the source: no claim about which margin it was in. */
+.reed-marginalia.reed-margin-unspecified::before { content: none; }
+
+/* --------------------------------------------------- research notes */
+
+.reed-note-marker {
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1;
+  padding: 0 0.15em;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--reed-accent);
+  cursor: pointer;
+}
+
+.reed-note-marker:hover,
+.reed-note-marker:focus {
+  background: var(--reed-accent-wash);
+}
+
+.reed-research-note {
+  max-width: 22em;
+  padding: 0.7em 0.9em;
+  border: 1px solid var(--reed-rule);
+  border-radius: 4px;
+  background: var(--reed-surface-raised);
+  box-shadow: 0 2px 10px hsl(0 0% 0% / 0.18);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+/* If the XSLT is run with -xsl:research-notes=inline instead */
+.reed-research-note-inline {
+  font-size: 0.85em;
+  color: var(--reed-ink-muted);
+}
+.reed-research-note-inline::before { content: " ["; }
+.reed-research-note-inline::after  { content: "] "; }
+
+/* ---------------------------------------------------------- entities */
+
+/* Named entities in red. The XSLT emits <a class="reed-tei-persName"> when
+   the element carries @ref/@target and <span class="reed-tei-persName">
+   when it doesn't, so the anchor is exactly the "has an authority link"
+   case and can be bolded on that basis — no extra class needed.
+
+   Caveat: an entity nested inside another entity is rendered as a span
+   even when it has @ref, to avoid a link inside a link, so it stays
+   unbolded. Rare, and arguably right. */
+.reed-text :is(.reed-tei-persName,
+               .reed-tei-placeName,
+               .reed-tei-orgName,
+               .reed-tei-objectName,
+               .reed-tei-rs,
+               .reed-tei-title,
+               .reed-tei-date,
+               .reed-tei-ref) {
+  color: var(--reed-entity);
+}
+
+/* The record title and its date are themselves tagged <title>/<date>, so
+   the h1 turns entirely red, and a <date> in a page head colours part of
+   the heading. Uncomment to keep headings in the heading colour and
+   confine the red to the body of the record:
+
+.reed-text :is(h1, h2, h3) :is(.reed-tei-title, .reed-tei-date, .reed-tei-persName,
+                               .reed-tei-placeName, .reed-tei-orgName,
+                               .reed-tei-objectName, .reed-tei-rs, .reed-tei-ref) {
+  color: inherit;
+  font-weight: inherit;
+}
+*/
+
+.reed-text a:is(.reed-tei-persName,
+                .reed-tei-placeName,
+                .reed-tei-orgName,
+                .reed-tei-objectName,
+                .reed-tei-rs,
+                .reed-tei-title,
+                .reed-tei-date,
+                .reed-tei-ref) {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reed-text a:is(.reed-tei-persName,
+                .reed-tei-placeName,
+                .reed-tei-orgName,
+                .reed-tei-objectName,
+                .reed-tei-rs,
+                .reed-tei-title,
+                .reed-tei-date,
+                .reed-tei-ref):hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Other links (a title or date pointing at an authority record) keep the
+   text colour rather than the browser's blue. */
+.reed-text a {
+  color: inherit;
+  text-decoration-color: var(--reed-rule);
+  text-underline-offset: 2px;
+}
+
+/* ------------------------------------------------ editorial apparatus */
+
+/* REED convention: letters supplied in expanding an abbreviation are
+   italic. Switch to brackets here if the edition prefers them. */
+.reed-ex {
+  font-style: italic;
+}
+
+.reed-supplied {
+  /* Unbracketed: <supplied> is also used for the editorial page headings.
+     Uncomment to bracket supplied text in the transcription only:
+     .reed-text td .reed-supplied::before { content: "["; }
+     .reed-text td .reed-supplied::after  { content: "]"; } */
+}
+
+.reed-gap {
+  color: var(--reed-ink-faint);
+  letter-spacing: 0.15em;
+}
+
+.reed-unclear {
+  border-bottom: 1px dotted var(--reed-ink-faint);
+}
+
+.reed-text del {
+  text-decoration: line-through;
+  text-decoration-color: var(--reed-ink-faint);
+}
+
+.reed-add-above,
+.reed-add-below {
+  font-size: 0.8em;
+}
+
+.reed-rend-center {
+  text-align: center;
+}
+
+.reed-tei-date {
+  /* normalised values are on data-when / data-to if you want a hook */
+}
+
+.reed-tei-title {
+  font-style: italic;
+}
+
+/* Page-break markers are citation anchors only — not shown by default.
+   Comment this out to make page numbers visible inline. */
+.reed-pb {
+  display: none;
+}
+
+/* ------------------------------------------------------------ narrow */
+
+@media (max-width: 900px) {
+  .reed-text {
+    padding-left: 1.5em;
+    padding-right: 1.5em;
+  }
+
+  .reed-marginalia,
+  .reed-text td:not(:last-child) .reed-marginalia {
+    float: none;
+    display: block;
+    width: auto;
+    margin: 0.3em 0 0.5em 0;
+    padding-left: 0.6em;
+    border-left: 3px solid var(--reed-rule);
+    text-align: left;
+  }
+
+  .reed-text td:last-child {
+    width: 6em;
+  }
+}

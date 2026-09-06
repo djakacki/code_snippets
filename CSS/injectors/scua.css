@@ -1,0 +1,62 @@
+/* Root: CSS Variables can be used to store values that can be reused throughout the stylesheet*/
+:root {
+  --scua-color-parchment: hsl(38 21.4% 72.5%); 
+  --scua-color-antique: hsl(33 30.6% 48%);
+  --scua-color-pinot: hsl(5 49.5% 17.8%);
+  --scua-color-forest: hsl(87 4.8% 36.7%);
+  --scua-color-white: hsl(0, 0%, 100%);
+  --scua-color-astronaut-blue: hsl(202, 98%, 19%);
+}
+
+/* Background Colors: Use the CSS Variables to set the background color of the elements */
+.scua-bg-parchment    { background-color: var(--scua-color-parchment); }
+.scua-bg-antique  {background-color: var(--scua-color-antique);  }
+.scua-bg-pinot  {background-color: var(--scua-color-pinot);  }
+.scua-bg-forest  {background-color: var(--scua-color-forest);  }
+.scua-bg-astronaut-blue {background-color: var(--scua-color-astronaut-blue); }
+.scua-bg-color-white {background-color:var(--scua-color-white);}
+
+/* Text Colors: Use the CSS Variables to set the background color of the elements */
+.scua-text-parchment  { color: var(--scua-color-parchment); }
+.scua-text-antique  {color: var(--scua-color-antique);  }
+.scua-text-pinot  {color: var(--scua-color-pinot);  }
+.scua-text-forest  {color: var(--scua-color-forest);  }
+.scua-text-astronaut-blue  {color: var(--scua-color-astronaut-blue);  }
+.scua-text-color-white {color:var(--scua-color-white);}
+
+/* Padding for sections */
+.scua-padding {
+    padding: 0.5rem 1.25rem;
+}
+
+/*  Button: Use the CSS Variables to set the background color of the button */
+.scua-btn {
+  padding: 0.5rem 1.25rem;
+  background-color: var(--scua-color-pinot);
+  color: var(--white);
+  border: none;
+  border-radius: .25rem;
+  font-size: 1rem;
+  cursor: pointer;
+  }
+  
+  /*  different hover color
+  &:hover {
+    background-color: var(--scua-color-pinot);
+  } */
+  .scua-blockquote {
+	margin: 24px 0;
+	padding-left: 20px;
+	border-left: 3px solid var(--scua-color-astronaut-blue);
+	font-style: italic;
+	font-size: 1.1em;
+	line-height: 1.5;
+}
+/* Footer for blockquote */
+.scua-footer {
+	font-style: normal;
+	font-size: 0.8em;
+	color: #666;
+	margin-top: 6px;
+}
+}

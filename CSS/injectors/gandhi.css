@@ -59,8 +59,8 @@ border: none;
   cursor: pointer;
   }
 
-/*  might want light green as text color on button */
+/*  might want light green as text color on button 
   &:hover {
     background-color: var(--gandhi-color-sage);
-  }
+  }*/
 }
