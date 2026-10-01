@@ -431,12 +431,15 @@ formula {
 }
 front {
     display: block;
+     border: thin black solid;
+     margin-top: 1em;
     margin-bottom: 1em;
     padding-top: 0.5em;
     padding-left: 0.5em;
     padding-right: 0.5em;
     padding-bottom: 0.5em;
 }
+
 funder {
     display: block;
     margin-bottom: 0.5em;

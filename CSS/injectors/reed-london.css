@@ -16,8 +16,11 @@
             --reed-dark-gray: hsl(0, 0%, 60%);
 }
 
-/* REED London Online — preview stylesheet / starting point for the LEAF
-   CSS Injector. Pairs with TEI2HTML_REED.xsl.
+/* REED London Online — stylesheet for the LEAF/Drupal CSS Injector.
+   Pairs with TEI2HTML_REED_v2.xsl.
+
+   Complete and current: includes the palette, the role layer, and the
+   variable-column table handling. Nothing further to patch on top.
 
    Class scheme produced by the XSLT:
      .reed-text                wrapper, reserves the right-hand gutter
@@ -64,13 +67,11 @@
   --reed-accent-wash: var(--reed-gray-cyan);      /* its hover state       */
   --reed-entity: var(--reed-color-red);           /* named entities        */
 
-  /* Gutter geometry. These three are shared by the marginalia rules
-     below — in particular a note encoded inside a table cell has to clear
-     the money column, so --money-col is declared here and used by both
-     the column and the note offset, rather than being repeated. */
+  /* Gutter geometry. Nothing here assumes how many columns a table has:
+     the money columns size themselves to their contents, and a marginal
+     note inside a table is positioned against the table's right edge. */
   --gutter: 8rem;
   --note-width: 7rem;
-  --money-col: 10.5rem;
 
   box-sizing: border-box;
   width: 100%;
@@ -135,6 +136,7 @@
   width: 100%;
   border-collapse: collapse;
   margin: 0 0 1em 0;
+  position: relative;   /* the containing block for marginal notes */
 }
 
 .reed-text td {
@@ -142,14 +144,16 @@
   padding: 0.15em 0;
 }
 
-/* The money column: last cell of each row, right-aligned and kept on one
-   line so sums like "xxvj s. iij d." don't wrap. Its width is the
-   --money-col variable because the marginalia rules need to know it. */
-.reed-text td:last-child {
-  box-sizing: border-box;
-  width: var(--money-col);
-  text-align: right;
+/* Money columns: every cell after the first. REED tables vary in shape —
+   Drapers puts the whole sum in one cell ("xxvj s. iij d."), Inner Temple
+   splits it into three (£ / s / d) — so nothing here fixes a width or a
+   column count. "width: 1%" with nowrap is the shrink-to-fit idiom for
+   table cells: each money column takes exactly the width of its longest
+   sum, and the entry column absorbs whatever is left. */
+.reed-text td:not(:first-child) {
+  width: 1%;
   white-space: nowrap;
+  text-align: right;
   padding-left: 1.5em;
 }
 
@@ -174,15 +178,33 @@
   text-align: left;
 }
 
-/* A note encoded inside a transcription row sits in the first cell, so
-   its float would land against the money column rather than the page
-   edge: it has to be pushed out by that column's width as well.
+/* Inside a table the float doesn't work: a note is encoded in the first
+   cell, so floating it right lands it against the money columns, and how
+   far it would need to be pushed depends on how many of them there are.
 
-   The gutter variables are in rem, not em, deliberately. An em on this
-   element is 0.75 of an em on the table cell, so an em-based offset comes
-   out a quarter short and drops the note straight onto the sums. */
-.reed-text td:not(:last-child) .reed-marginalia {
-  margin-right: calc(-1 * (var(--gutter) + var(--money-col)));
+   Positioned against the TABLE instead. With `top` left at auto, an
+   absolutely positioned box keeps its static position vertically — the
+   line it would have sat on — while `right` places it horizontally
+   relative to the table. So it lands in the gutter beside its own row
+   whether the table has two columns or five.
+
+   The gutter is in rem, not em, deliberately: an em on this element is
+   0.75 of an em on the cell, so an em offset comes out a quarter short. */
+.reed-text td .reed-marginalia {
+  position: absolute;
+  right: calc(-1 * var(--gutter));
+  float: none;
+  clear: none;
+}
+
+/* Out of flow, so two notes on one row would land on top of each other
+   (a left and a right ink dot on the same entry). Nudge the later ones
+   down a line each. */
+.reed-text td .reed-marginalia ~ .reed-marginalia {
+  margin-top: 1.5em;
+}
+.reed-text td .reed-marginalia ~ .reed-marginalia ~ .reed-marginalia {
+  margin-top: 3em;
 }
 
 /* Which margin the note occupies in the manuscript. The letter is
@@ -238,7 +260,7 @@
   line-height: 1.4;
 }
 
-/* If the XSLT is run with -xsl:research-notes=inline instead */
+/* If the XSLT is run with research-notes=inline instead */
 .reed-research-note-inline {
   font-size: 0.85em;
   color: var(--reed-ink-muted);
@@ -373,8 +395,10 @@
   }
 
   .reed-marginalia,
-  .reed-text td:not(:last-child) .reed-marginalia {
+  .reed-text td .reed-marginalia {
+    position: static;
     float: none;
+    margin-top: 0;
     display: block;
     width: auto;
     margin: 0.3em 0 0.5em 0;
@@ -383,7 +407,135 @@
     text-align: left;
   }
 
-  .reed-text td:last-child {
-    width: 6em;
+  .reed-text td:not(:first-child) {
+    padding-left: 0.8em;
   }
+}
+  
+  /* REED London Online — place names organized by type.
+   Separate CSS Injector rule; restrict it to the place-names page.
+
+   Depends on the :root palette in reed-london.css. That file's job-layer
+   variables (--reed-ink, --reed-rule, ...) are declared on .reed-text and
+   so are not in scope here, so the jobs this page needs are re-declared
+   below against the same palette entries. Same convention, same values,
+   no dependency on the transcription stylesheet's internals.
+
+   Markup this expects:
+     .reed-place-list             wrapper around the whole list
+     .type-index                  the jump-to box
+     .place-type                  one <section> per place type
+     .place-names                 the <ul> of names
+     .count                       the "(131)" in a heading or index row
+*/
+
+.reed-place-list {
+  --reed-ink: var(--reed-gray10);                 /* names, body text   */
+  --reed-ink-heading: var(--reed-brown);          /* type headings      */
+  --reed-ink-muted: var(--reed-stone-cold-gray);  /* counts             */
+  --reed-rule: var(--reed-gray80);                /* index box border   */
+  --reed-rule-faint: var(--reed-bleach);          /* under-heading rule */
+  --reed-surface: var(--reed-white-smoke);        /* index box fill     */
+
+  /* Column sizing is a minimum width, not a fixed count, so the list
+     reflows to whatever width the layout section gives it — unchanged
+     whether the region is full-width or sitting in a 50% column. */
+  --col-min: 13rem;
+  --col-min-index: 11rem;
+
+  box-sizing: border-box;
+  font-family: Georgia, "Iowan Old Style", serif;
+  line-height: 1.5;
+  color: var(--reed-ink);
+}
+
+/* ------------------------------------------------------------- index */
+
+.reed-place-list .type-index {
+  margin: 0 0 2.5em;
+  padding: 1em 1.25em;
+  border: 1px solid var(--reed-rule);
+  background: var(--reed-surface);
+}
+
+.reed-place-list .type-index h2 {
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--reed-ink-heading);
+  margin: 0 0 0.75em 0;
+}
+
+.reed-place-list .type-index-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: var(--col-min-index);
+  column-gap: 1.75em;
+}
+
+.reed-place-list .type-index-list li {
+  margin: 0 0 0.3em 0;
+  break-inside: avoid;
+}
+
+/* ---------------------------------------------------------- sections */
+
+.reed-place-list .place-type {
+  margin: 0 0 2.75em 0;
+}
+
+/* Matches the transcription stylesheet: text face, body size, weight and
+   a rule carrying the separation rather than large type. */
+.reed-place-list .place-type h3 {
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--reed-ink-heading);
+  margin: 0 0 0.2em 0;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--reed-rule-faint);
+}
+
+.reed-place-list .count {
+  font-weight: normal;
+  color: var(--reed-ink-muted);
+}
+
+.reed-place-list .definition {
+  margin: 0.4em 0 0.9em 0;
+}
+
+/* ------------------------------------------------------------- names */
+
+.reed-place-list .place-names {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: var(--col-min);
+  column-gap: 2em;
+}
+
+.reed-place-list .place-names li {
+  margin: 0 0 0.25em 0;
+  break-inside: avoid;
+}
+
+/* Anchored headings clear of any sticky site header. Scoped to this
+   wrapper rather than a bare [id] so it can't affect the rest of the
+   site through the injector. */
+.reed-place-list :is(h2, h3)[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* ------------------------------------------------------------ narrow */
+
+/* Same 900px breakpoint as the transcription stylesheet. */
+@media (max-width: 900px) {
+  .reed-place-list {
+    --col-min: 9rem;
+    --col-min-index: 8rem;
+  }
+}
 }
