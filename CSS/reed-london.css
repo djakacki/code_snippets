@@ -1,0 +1,775 @@
+:root {
+            /* Eleven entries, one per job in the role layer below. Seven
+               others were pruned: they duplicated these to within a
+               percentage point or two, or were left over from a dead
+               declaration. */
+            --reed-color-red: hsl(353, 67%, 37%);
+            --reed-gray10:  hsl(0, 0%, 10%);
+            --reed-brown: hsl(35, 11%, 22%);
+            --reed-bleach: hsl(60, 5%, 92%);
+            --reed-stone-cold-gray: hsl(0, 0%, 33%);
+            --reed-white-smoke: hsl(60, 10%, 96%);
+            --reed-gray80: hsl(0, 0%, 80%);
+            --reed-dark-teal: hsl(145, 61%, 26%);
+            --reed-gray-cyan: hsl(142, 31%, 93%);
+            --reed-pure-white: hsl(0, 0%, 100%);
+            --reed-dark-gray: hsl(0, 0%, 60%);
+}
+
+/* REED London Online — stylesheet for the LEAF/Drupal CSS Injector.
+   Pairs with TEI2HTML_REED_v2.xsl.
+
+   Complete and current: includes the palette, the role layer, and the
+   variable-column table handling. Nothing further to patch on top.
+
+   Class scheme produced by the XSLT:
+     .reed-text                wrapper, reserves the right-hand gutter
+     .reed-marginalia .reed-margin-left  <note type="marginal" place="margin_left">
+     .reed-marginalia .reed-margin-right <note type="marginal" place="margin_right">
+     .reed-note-marker              clickable marker for a researchNote
+     .reed-research-note            the popover body
+     .reed-ex                       editorial expansion of an abbreviation
+     .reed-supplied                 text supplied by the editor
+     .reed-gap                      omitted/illegible text
+     .reed-pb                       page-break anchor (hidden)
+     .reed-ab .reed-rend-center     anonymous block, with @rend as a class
+     .reed-add-above .reed-add-below .reed-tei-date .reed-tei-title
+     .reed-transcription .reed-endnote   from div/@type
+*/
+
+/* ------------------------------------------------------------ palette use
+
+   Rather than reaching into the palette at every rule, the stylesheet
+   names the JOBS colours do and points each job at one palette entry.
+   Every colour below this block is one of these eleven, so re-theming
+   means editing this list and nothing else — and a question like "are the
+   marginalia and the deletions meant to be the same grey?" is answerable
+   by reading nine lines instead of hunting through the file.
+
+   Deliberate collapses, where the values were distinguishable in theory
+   more than on screen:
+     ink-faint  was three greys (47%, 53%, 60%) — gaps, the L/R letter,
+                deletions: all "faint apparatus", now one
+     ink-muted  was 27% and 33% — marginalia and inline research notes
+     rule       was 73%, 80% and 81% — three different 1px borders
+   ------------------------------------------------------------------------ */
+
+.reed-text {
+  --reed-ink: var(--reed-gray10);                 /* running text, h1      */
+  --reed-ink-heading: var(--reed-brown);          /* division heads        */
+  --reed-ink-muted: var(--reed-stone-cold-gray);  /* marginalia            */
+  --reed-ink-faint: var(--reed-dark-gray);        /* apparatus marks       */
+  --reed-rule: var(--reed-gray80);                /* 1px borders           */
+  --reed-rule-faint: var(--reed-bleach);          /* hairline between divs */
+  --reed-surface: var(--reed-white-smoke);        /* L/R badge             */
+  --reed-surface-raised: var(--reed-pure-white);  /* popover               */
+  --reed-accent: var(--reed-dark-teal);           /* research-note marker  */
+  --reed-accent-wash: var(--reed-gray-cyan);      /* its hover state       */
+  --reed-entity: var(--reed-color-red);           /* named entities        */
+
+  /* Gutter geometry. Nothing here assumes how many columns a table has:
+     the money columns size themselves to their contents, and a marginal
+     note inside a table is positioned against the table's right edge. */
+  --gutter: 8rem;
+  --note-width: 7rem;
+
+  box-sizing: border-box;
+  width: 100%;
+  padding: 1.5em 9rem 3em 1.5em;  /* right padding = the notes' gutter */
+  font-family: Georgia, "Iowan Old Style", serif;
+  line-height: 1.5;
+  color: var(--reed-ink);
+}
+
+/* ---------------------------------------------------------------- page */
+
+/* The record title is the one prominent thing on the page — but set in
+   the text face at a modest size, not shouted. */
+.reed-text h1 {
+  font-size: 1.35em;
+  font-weight: normal;
+  color: var(--reed-ink);
+  margin-bottom: 1.2em;
+}
+
+.reed-text h1 .reed-tei-title {
+  font-style: normal;           /* the record title is already the heading */
+}
+
+/* Division heads are page/folio references — apparatus, not content.
+   Set in the text face at body size — findable when you scan for a page
+   reference, but not competing with the record itself. Separation between
+   divisions comes from a hairline rule and white space rather than from
+   oversized type. */
+.reed-text h2,
+.reed-text h3 {
+  font-family: inherit;         /* the text face, not a contrasting sans */
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--reed-ink-heading);
+  margin: 0 0 0.9em 0;
+}
+
+.reed-text section > section {
+  margin-top: 2.2em;
+  padding-top: 1.3em;
+  border-top: 1px solid var(--reed-rule-faint);
+}
+
+.reed-text section > section:first-of-type {
+  border-top: 0;
+}
+
+.reed-text p {
+  margin: 0 0 1em 0;
+}
+
+.reed-text section.reed-endnote {
+  margin-top: 3em;
+  font-size: 0.92em;
+}
+
+/* -------------------------------------------------- transcription tables */
+
+.reed-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em 0;
+  position: relative;   /* the containing block for marginal notes */
+}
+
+.reed-text td {
+  vertical-align: top;
+  padding: 0.15em 0;
+}
+
+/* Money columns: every cell after the first. REED tables vary in shape —
+   Drapers puts the whole sum in one cell ("xxvj s. iij d."), Inner Temple
+   splits it into three (£ / s / d) — so nothing here fixes a width or a
+   column count. "width: 1%" with nowrap is the shrink-to-fit idiom for
+   table cells: each money column takes exactly the width of its longest
+   sum, and the entry column absorbs whatever is left. */
+.reed-text td:not(:first-child) {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  padding-left: 1.5em;
+}
+
+/* ------------------------------------------------------ marginal notes */
+
+/* Every marginal note, whichever side of the manuscript page it sits on,
+   is displayed in the one right-hand gutter.
+
+   A float rather than absolute positioning: notes can occur as two
+   consecutive siblings before an <ab> (p 171), and floats stack with
+   clear instead of overlapping. The negative margin is what carries the
+   note out of the text column; table cells don't clip overflow, so it
+   escapes a <td> as well as a <p>. */
+.reed-marginalia {
+  float: right;
+  clear: right;
+  width: var(--note-width);
+  margin-right: calc(-1 * var(--gutter));
+  font-size: 0.75em;
+  line-height: 1.3;
+  color: var(--reed-ink-muted);
+  text-align: left;
+}
+
+/* Inside a table the float doesn't work: a note is encoded in the first
+   cell, so floating it right lands it against the money columns, and how
+   far it would need to be pushed depends on how many of them there are.
+
+   Positioned against the TABLE instead. With `top` left at auto, an
+   absolutely positioned box keeps its static position vertically — the
+   line it would have sat on — while `right` places it horizontally
+   relative to the table. So it lands in the gutter beside its own row
+   whether the table has two columns or five.
+
+   The gutter is in rem, not em, deliberately: an em on this element is
+   0.75 of an em on the cell, so an em offset comes out a quarter short. */
+.reed-text td .reed-marginalia {
+  position: absolute;
+  right: calc(-1 * var(--gutter));
+  float: none;
+  clear: none;
+}
+
+/* Out of flow, so two notes on one row would land on top of each other
+   (a left and a right ink dot on the same entry). Nudge the later ones
+   down a line each. */
+.reed-text td .reed-marginalia ~ .reed-marginalia {
+  margin-top: 1.5em;
+}
+.reed-text td .reed-marginalia ~ .reed-marginalia ~ .reed-marginalia {
+  margin-top: 3em;
+}
+
+/* Which margin the note occupies in the manuscript. The letter is
+   decorative — the same information is in the title attribute and in
+   data-place, so nothing depends on the pseudo-element. */
+.reed-marginalia::before {
+  content: "";
+  float: left;
+  margin: 0.1em 0.4em 0 0;
+  padding: 0 0.3em;
+  border: 1px solid var(--reed-rule);
+  border-radius: 2px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.75em;
+  line-height: 1.5;
+  color: var(--reed-ink-faint);
+  background: var(--reed-surface);
+}
+
+.reed-marginalia.reed-margin-left::before  { content: "L"; }
+.reed-marginalia.reed-margin-right::before { content: "R"; }
+
+/* No @place in the source: no claim about which margin it was in. */
+.reed-marginalia.reed-margin-unspecified::before { content: none; }
+
+/* --------------------------------------------------- research notes */
+
+.reed-note-marker {
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1;
+  padding: 0 0.15em;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--reed-accent);
+  cursor: pointer;
+}
+
+.reed-note-marker:hover,
+.reed-note-marker:focus {
+  background: var(--reed-accent-wash);
+}
+
+.reed-research-note {
+  max-width: 22em;
+  padding: 0.7em 0.9em;
+  border: 1px solid var(--reed-rule);
+  border-radius: 4px;
+  background: var(--reed-surface-raised);
+  box-shadow: 0 2px 10px hsl(0 0% 0% / 0.18);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+/* If the XSLT is run with research-notes=inline instead */
+.reed-research-note-inline {
+  font-size: 0.85em;
+  color: var(--reed-ink-muted);
+}
+.reed-research-note-inline::before { content: " ["; }
+.reed-research-note-inline::after  { content: "] "; }
+
+/* ---------------------------------------------------------- entities */
+
+/* Named entities in red. The XSLT emits <a class="reed-tei-persName"> when
+   the element carries @ref/@target and <span class="reed-tei-persName">
+   when it doesn't, so the anchor is exactly the "has an authority link"
+   case and can be bolded on that basis — no extra class needed.
+
+   Caveat: an entity nested inside another entity is rendered as a span
+   even when it has @ref, to avoid a link inside a link, so it stays
+   unbolded. Rare, and arguably right. */
+.reed-text :is(.reed-tei-persName,
+               .reed-tei-placeName,
+               .reed-tei-orgName,
+               .reed-tei-objectName,
+               .reed-tei-rs,
+               .reed-tei-title,
+               .reed-tei-date,
+               .reed-tei-ref) {
+  color: var(--reed-entity);
+}
+
+/* The record title and its date are themselves tagged <title>/<date>, so
+   the h1 turns entirely red, and a <date> in a page head colours part of
+   the heading. Uncomment to keep headings in the heading colour and
+   confine the red to the body of the record:
+
+.reed-text :is(h1, h2, h3) :is(.reed-tei-title, .reed-tei-date, .reed-tei-persName,
+                               .reed-tei-placeName, .reed-tei-orgName,
+                               .reed-tei-objectName, .reed-tei-rs, .reed-tei-ref) {
+  color: inherit;
+  font-weight: inherit;
+}
+*/
+
+.reed-text a:is(.reed-tei-persName,
+                .reed-tei-placeName,
+                .reed-tei-orgName,
+                .reed-tei-objectName,
+                .reed-tei-rs,
+                .reed-tei-title,
+                .reed-tei-date,
+                .reed-tei-ref) {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reed-text a:is(.reed-tei-persName,
+                .reed-tei-placeName,
+                .reed-tei-orgName,
+                .reed-tei-objectName,
+                .reed-tei-rs,
+                .reed-tei-title,
+                .reed-tei-date,
+                .reed-tei-ref):hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Other links (a title or date pointing at an authority record) keep the
+   text colour rather than the browser's blue. */
+.reed-text a {
+  color: inherit;
+  text-decoration-color: var(--reed-rule);
+  text-underline-offset: 2px;
+}
+
+/* ------------------------------------------------ editorial apparatus */
+
+/* REED convention: letters supplied in expanding an abbreviation are
+   italic. Switch to brackets here if the edition prefers them. */
+.reed-ex {
+  font-style: italic;
+}
+
+.reed-supplied {
+  /* Unbracketed: <supplied> is also used for the editorial page headings.
+     Uncomment to bracket supplied text in the transcription only:
+     .reed-text td .reed-supplied::before { content: "["; }
+     .reed-text td .reed-supplied::after  { content: "]"; } */
+}
+
+.reed-gap {
+  color: var(--reed-ink-faint);
+  letter-spacing: 0.15em;
+}
+
+.reed-unclear {
+  border-bottom: 1px dotted var(--reed-ink-faint);
+}
+
+.reed-text del {
+  text-decoration: line-through;
+  text-decoration-color: var(--reed-ink-faint);
+}
+
+.reed-add-above,
+.reed-add-below {
+  font-size: 0.8em;
+}
+
+.reed-rend-center {
+  text-align: center;
+}
+
+.reed-tei-date {
+  /* normalised values are on data-when / data-to if you want a hook */
+}
+
+.reed-tei-title {
+  font-style: italic;
+}
+
+/* Page-break markers are citation anchors only — not shown by default.
+   Comment this out to make page numbers visible inline. */
+.reed-pb {
+  display: none;
+}
+
+/* ------------------------------------------------------------ narrow */
+
+@media (max-width: 900px) {
+  .reed-text {
+    padding-left: 1.5em;
+    padding-right: 1.5em;
+  }
+
+  .reed-marginalia,
+  .reed-text td .reed-marginalia {
+    position: static;
+    float: none;
+    margin-top: 0;
+    display: block;
+    width: auto;
+    margin: 0.3em 0 0.5em 0;
+    padding-left: 0.6em;
+    border-left: 3px solid var(--reed-rule);
+    text-align: left;
+  }
+
+  .reed-text td:not(:first-child) {
+    padding-left: 0.8em;
+  }
+}
+  
+  /* REED London Online — place names organized by type.
+   Separate CSS Injector rule; restrict it to the place-names page.
+
+   Depends on the :root palette in reed-london.css. That file's job-layer
+   variables (--reed-ink, --reed-rule, ...) are declared on .reed-text and
+   so are not in scope here, so the jobs this page needs are re-declared
+   below against the same palette entries. Same convention, same values,
+   no dependency on the transcription stylesheet's internals.
+
+   Markup this expects:
+     .reed-place-list             wrapper around the whole list
+     .type-index                  the jump-to box
+     .place-type                  one <section> per place type
+     .place-names                 the <ul> of names
+     .count                       the "(131)" in a heading or index row
+*/
+
+.reed-place-list {
+  --reed-ink: var(--reed-gray10);                 /* names, body text   */
+  --reed-ink-heading: var(--reed-brown);          /* type headings      */
+  --reed-ink-muted: var(--reed-stone-cold-gray);  /* counts             */
+  --reed-rule: var(--reed-gray80);                /* index box border   */
+  --reed-rule-faint: var(--reed-bleach);          /* under-heading rule */
+  --reed-surface: var(--reed-white-smoke);        /* index box fill     */
+
+  /* Column sizing is a minimum width, not a fixed count, so the list
+     reflows to whatever width the layout section gives it — unchanged
+     whether the region is full-width or sitting in a 50% column. */
+  --col-min: 13rem;
+  --col-min-index: 11rem;
+
+  box-sizing: border-box;
+  font-family: Georgia, "Iowan Old Style", serif;
+  line-height: 1.5;
+  color: var(--reed-ink);
+}
+
+/* ------------------------------------------------------------- index */
+
+.reed-place-list .type-index {
+  margin: 0 0 2.5em;
+  padding: 1em 1.25em;
+  border: 1px solid var(--reed-rule);
+  background: var(--reed-surface);
+}
+
+.reed-place-list .type-index h2 {
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--reed-ink-heading);
+  margin: 0 0 0.75em 0;
+}
+
+.reed-place-list .type-index-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: var(--col-min-index);
+  column-gap: 1.75em;
+}
+
+.reed-place-list .type-index-list li {
+  margin: 0 0 0.3em 0;
+  break-inside: avoid;
+}
+
+/* ---------------------------------------------------------- sections */
+
+.reed-place-list .place-type {
+  margin: 0 0 2.75em 0;
+}
+
+/* Matches the transcription stylesheet: text face, body size, weight and
+   a rule carrying the separation rather than large type. */
+.reed-place-list .place-type h3 {
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--reed-ink-heading);
+  margin: 0 0 0.2em 0;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--reed-rule-faint);
+}
+
+.reed-place-list .count {
+  font-weight: normal;
+  color: var(--reed-ink-muted);
+}
+
+.reed-place-list .definition {
+  margin: 0.4em 0 0.9em 0;
+}
+
+/* ------------------------------------------------------------- names */
+
+.reed-place-list .place-names {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: var(--col-min);
+  column-gap: 2em;
+}
+
+.reed-place-list .place-names li {
+  margin: 0 0 0.25em 0;
+  break-inside: avoid;
+}
+
+/* Anchored headings clear of any sticky site header. Scoped to this
+   wrapper rather than a bare [id] so it can't affect the rest of the
+   site through the injector. */
+.reed-place-list :is(h2, h3)[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* ------------------------------------------------------------ narrow */
+
+/* Same 900px breakpoint as the transcription stylesheet. */
+@media (max-width: 900px) {
+  .reed-place-list {
+    --col-min: 9rem;
+    --col-min-index: 8rem;
+  }
+}
+
+/* ======================================================================
+   REED Pre-Publication — sub-project sidebar menu.
+
+   A vertical, three-level accordion (section > place/type > locale),
+   placed as a block in the sidebar region and enhanced by the
+   accompanying JavaScript injector. Without the script the full nested
+   list simply shows, so nothing is hidden from a reader whose script
+   fails.
+
+   Styled after the project's main horizontal menu: a thin rust outline
+   with rounded corners, bold uppercase sans-serif at the top level, a
+   small triangular caret, and no shadows or divider lines. Open
+   sub-levels drop to sentence case and normal weight, so they read as
+   quieter than the section headings.
+
+   Markup this expects:
+     .reed-submenu                    the <nav>
+     .reed-submenu__title             the <h2>
+     .reed-submenu__list              the top-level <ul>
+   Added by the script:
+     .is-enhanced                     on the <nav> once the script has run
+     .reed-submenu__row               wraps each parent's link + toggle
+     .reed-submenu__toggle            the caret button
+     .is-open                         on an expanded <li>
+     [aria-current="page"]            on the link for the page being viewed
+
+   Same convention as the sections above: the jobs this menu needs are
+   declared against the palette entries. The one exception is the rust of
+   the main menu's outline, which is not in the palette; --reed-rust below
+   is an estimate read from a screenshot. Replace it with the exact value
+   from the main menu (inspect its border-color), or point it at
+   var(--reed-color-red) to stay strictly within the palette.
+   ====================================================================== */
+
+.reed-submenu {
+  --reed-ink: var(--reed-gray10);                 /* link text              */
+  --reed-ink-muted: var(--reed-stone-cold-gray);  /* title                  */
+  --reed-rule: var(--reed-gray80);                /* nested-level line      */
+  --reed-surface: var(--reed-white-smoke);        /* hover, current page    */
+  --reed-rust: hsl(17, 56%, 43%);                 /* outline: ESTIMATE      */
+  --reed-accent: var(--reed-rust);                /* outline, hover, focus  */
+
+  box-sizing: border-box;
+  margin: 0 0 1.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--reed-accent);
+  border-radius: 6px;
+  background: var(--reed-pure-white);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: var(--reed-ink);
+}
+
+/* Flat by design: no shadows or gradients on anything in the menu, so a
+   theme's default button/link/list styling can't add depth to it. */
+.reed-submenu,
+.reed-submenu * {
+  box-shadow: none;
+  text-shadow: none;
+  background-image: none;
+}
+
+.reed-submenu__title {
+  margin: 0 0 0.4rem 0;
+  padding: 0.4rem 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--reed-rule);   /* narrow line under the title */
+  font-family: inherit;
+  font-size: 1em;                 /* same size as the menu items */
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--reed-ink-muted);
+}
+
+/* The title links to the Pre-Publication landing page. Inside the title
+   the link takes on the title's look rather than the item styling. */
+.reed-submenu__title a {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-decoration: none;
+}
+
+.reed-submenu__title a:hover,
+.reed-submenu__title a:focus-visible {
+  background: none;
+  color: var(--reed-accent);
+}
+
+.reed-submenu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reed-submenu li {
+  margin: 0;
+}
+
+/* Top level: bold uppercase, as in the main menu. */
+.reed-submenu a {
+  display: block;
+  flex: 1 1 auto;
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.reed-submenu a:hover,
+.reed-submenu a:focus-visible {
+  background: var(--reed-surface);
+  color: var(--reed-accent);
+}
+
+.reed-submenu a[aria-current="page"] {
+  background: var(--reed-surface);
+  color: var(--reed-accent);
+}
+
+/* Nested levels: sentence case, normal weight, one fine rule down the
+   left of each level instead of heavier indentation devices. */
+.reed-submenu ul ul {
+  margin: 0 0 0.3rem 0.6rem;
+  padding-left: 0.3rem;
+  border-left: 1px solid var(--reed-rule);
+}
+
+.reed-submenu ul ul a {
+  padding: 0.35rem 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.reed-submenu ul ul a[aria-current="page"] {
+  font-weight: 700;
+}
+
+/* Row wrapper and toggle, both added by the script. The row is a flex
+   container so the caret spans the full height of a label that wraps
+   onto two lines. */
+.reed-submenu__row {
+  display: flex;
+  align-items: stretch;
+}
+
+.reed-submenu__toggle {
+  flex: 0 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  color: var(--reed-ink);
+  cursor: pointer;
+}
+
+/* The small filled triangle used by the main menu's dropdowns. */
+.reed-submenu__toggle::before {
+  content: "";
+  border-top: 0.3em solid;
+  border-right: 0.3em solid transparent;
+  border-left: 0.3em solid transparent;
+  transition: transform 0.15s;
+}
+
+.reed-submenu__toggle[aria-expanded="true"]::before {
+  transform: rotate(180deg);
+}
+
+.reed-submenu__toggle:hover {
+  background: var(--reed-surface);
+  color: var(--reed-accent);
+}
+
+.reed-submenu__toggle:focus-visible {
+  outline: 2px solid var(--reed-accent);
+  outline-offset: -2px;
+}
+
+/* Parents with no page of their own (Buckinghamshire, Scotland, ...):
+   the script turns the whole label into the toggle button, styled to
+   match a link at the same level, with the caret pushed to the right. */
+.reed-submenu__toggle.reed-submenu__toggle--label {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: left;
+  color: inherit;
+}
+
+.reed-submenu__toggle--label::before {
+  order: 2;
+  flex: 0 0 auto;
+  margin-right: 0.15rem;
+}
+
+.reed-submenu ul ul .reed-submenu__toggle.reed-submenu__toggle--label {
+  padding: 0.35rem 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Collapsed state applies only once the script is running. */
+.reed-submenu.is-enhanced li:not(.is-open) > ul {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reed-submenu__toggle::before {
+    transition: none;
+  }
+}
